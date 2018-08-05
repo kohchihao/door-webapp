@@ -6,7 +6,7 @@ import io from 'socket.io-client';
 import { Line } from 'rc-progress';
 import filesize from 'filesize';
 
-const socket = io('https://basalt-opossum.glitch.me/');
+const socket = io('https://door-server.glitch.me/');
 
 class ConnectedScreen extends Component {
   constructor(props) {

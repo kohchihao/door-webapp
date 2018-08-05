@@ -4,7 +4,7 @@ import io from 'socket.io-client';
 import QRCode from 'qrcode';
 import axios from 'axios';
 
-const socket = io('https://basalt-opossum.glitch.me/');
+const socket = io('https://door-server.glitch.me/');
 
 class NormalScreen extends Component {
   constructor(props) {
