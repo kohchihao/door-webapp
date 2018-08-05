@@ -3,6 +3,8 @@ import './ConnectedScreen.css';
 import Dropzone from 'react-dropzone';
 import axios from 'axios';
 import io from 'socket.io-client';
+import { Line } from 'rc-progress';
+import filesize from 'filesize';
 
 const socket = io('https://basalt-opossum.glitch.me/');
 
@@ -12,7 +14,8 @@ class ConnectedScreen extends Component {
     this.state = {
       ip: this.props.ip,
       roomID: this.props.roomID,
-      fileList: []
+      fileList: [],
+      numOfFiles: 0
     };
   }
 
@@ -23,28 +26,55 @@ class ConnectedScreen extends Component {
     });
   }
 
+  myUploadProgress = myFileId => progress => {
+    let percentage = Math.floor((progress.loaded * 100) / progress.total);
+    let fileList = this.state.fileList;
+    let f = fileList[myFileId];
+    f.progress = percentage;
+    fileList[myFileId] = f;
+    this.setState({
+      fileList: fileList
+    });
+  };
+
   //send files to device
   onFileDrop = files => {
     console.log(files);
-    files.forEach(file => {
+    let numOfFiles = this.state.numOfFiles;
+    for (let i = 0; i < files.length; i++) {
+      let file = files[i];
       let form = new FormData();
       form.append('filename', file);
+
+      //show files in list
+      let fileList = this.state.fileList;
+      fileList.push(file);
+      this.setState({
+        fileList: fileList
+      });
+
+      //axios config
+      const config = {
+        onUploadProgress: this.myUploadProgress(numOfFiles)
+      };
+      numOfFiles += 1;
+
       axios
-        .post(this.state.ip + '/uploadfile', form)
+        .post(this.state.ip + '/uploadfile', form, config)
         .then(response => {
           console.log(response.data);
           let status = response.data.status;
-          let fileList = this.state.fileList;
           if (status === 'done') {
-            fileList.push(file.name);
-            this.setState({
-              fileList: fileList
-            });
+            console.log('filetransfer done');
           }
         })
         .catch(function(error) {
           console.log(error);
         });
+    }
+
+    this.setState({
+      numOfFiles: numOfFiles
     });
   };
 
@@ -56,6 +86,54 @@ class ConnectedScreen extends Component {
     });
     //change screen back to normal
     this.props.phoneConnected(false);
+  };
+
+  renderNotEmptyList = () => {
+    return (
+      <div className="dropZone1">
+        <ul className="sentList">
+          {this.state.fileList.map(file => {
+            return (
+              <li>
+                <div className="card">
+                  <span>{file.name}</span>
+                  <span>{filesize(file.size)}</span>
+                  <Line
+                    className="progressBar"
+                    percent={file.progress}
+                    strokeWidth="4"
+                    strokeColor="#D3D3D3"/> 
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+
+        <Dropzone
+          className="ignore"
+          disableClick={false}
+          onDrop={this.onFileDrop}
+        >
+          <a className="dropText">
+            Drop your files here or click here to upload
+          </a>
+        </Dropzone>
+      </div>
+    );
+  };
+
+  renderDropZone = () => {
+    return (
+      <Dropzone
+        className="ignore"
+        disableClick={false}
+        onDrop={this.onFileDrop}
+      >
+        <a className="dropText">
+          Drop your files here or click here to uploadssssssss
+        </a>
+      </Dropzone>
+    );
   };
 
   render() {
@@ -76,21 +154,9 @@ class ConnectedScreen extends Component {
             </button>
           </header>
           <div className="dropZone">
-            <Dropzone
-              className="ignore"
-              disableClick={false}
-              onDrop={this.onFileDrop}
-            >
-              <a className="dropText">
-                Drop your files here or click here to upload
-              </a>
-
-              <ul>
-                {this.state.fileList.map(listValue => {
-                  return <li>{listValue}</li>;
-                })}
-              </ul>
-            </Dropzone>
+            {this.state.fileList.length > 0
+              ? this.renderNotEmptyList()
+              : this.renderDropZone()}
           </div>
         </div>
       </Dropzone>
